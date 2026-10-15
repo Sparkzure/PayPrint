@@ -1,0 +1,66 @@
+name: Release
+
+# 在 GitHub 上发布 Release（通常先推 tag 再建 Release）后，
+# 自动构建四个平台的单二进制，打成 zip（附 SHA256）并附到这个 Release 上。
+# 版本号取 Release 的 tag 名，经 -ldflags 写进启动日志。
+# 前端产物从 PayPrint-Frontend 的最新 Release 下载（make release-* 自带 web 步骤）。
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.release.tag_name }}
+
+jobs:
+  assets:
+    name: 构建 ${{ matrix.zip }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: release-linux-amd64
+            zip: payprint-server-${{ github.event.release.tag_name }}-linux-amd64.zip
+          - target: release-linux-arm64
+            zip: payprint-server-${{ github.event.release.tag_name }}-linux-arm64.zip
+          - target: release-linux-armv7
+            zip: payprint-server-${{ github.event.release.tag_name }}-linux-armv7.zip
+          - target: release-windows-amd64
+            zip: payprint-server-${{ github.event.release.tag_name }}-windows-amd64.zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      # release-* 目标自带 web 步骤（从 PayPrint-Frontend 最新 Release 取 dist），
+      # 然后逐平台交叉编译，产物落在 dist/。
+      - name: 构建（VERSION 取自 tag）
+        run: make ${{ matrix.target }} VERSION=${{ env.TAG }}
+
+      - name: 打包（zip 内是平台原生二进制）
+        run: |
+          mkdir -p upload
+          case "${{ matrix.zip }}" in
+            *windows*) EXE=payprint-server.exe ;;
+            *)         EXE=payprint-server ;;
+          esac
+          # zip 里的二进制统一命名（去掉平台后缀），解压即用。
+          cp "dist/$EXE" "upload/payprint-server${{ matrix.zip == '*windows*' && '.exe' || '' }}"
+          ( cd upload && zip -q "${{ matrix.zip }}" "payprint-server${{ matrix.zip == '*windows*' && '.exe' || '' }}" )
+          sha256sum "upload/${{ matrix.zip }}" > "upload/${{ matrix.zip }}.sha256"
+
+      - name: 上传到 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ env.TAG }}" "upload/${{ matrix.zip }}" "upload/${{ matrix.zip }}.sha256" --clobber

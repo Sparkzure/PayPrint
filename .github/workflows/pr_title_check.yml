@@ -1,0 +1,43 @@
+name: PR Title Check
+
+on:
+  pull_request_target:
+    types: [opened, edited]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  pr-title-check:
+    name: PR 标题（Conventional Commits）
+    runs-on: ubuntu-latest
+    steps:
+      - name: 校验标题并留言
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const ok = /^(feat|fix|refactor|perf|docs|style|test|build|ci|chore|revert)\([^)]+\)!?: \S/i.test(title);
+            const marker = '<!-- pr-title-check -->';
+            const issue = { ...context.repo, issue_number: context.issue.number };
+
+            const { data: comments } = await github.rest.issues.listComments({ ...issue, per_page: 100 });
+            const mine = comments.filter((c) => c.body && c.body.startsWith(marker));
+
+            if (ok) {
+              // 标题改对了就收掉之前的提醒，不留下过期告警。
+              for (const c of mine) {
+                await github.rest.issues.deleteComment({ ...issue, comment_id: c.id });
+              }
+              return;
+            }
+
+            if (mine.length === 0) {
+              const body = `${marker}⚠️ PR 标题需以 \`type(scope): 摘要\` 的形式开头，例如：\`feat(server): 新增站点连通性探测\`。
+
+            允许的 type：\`feat\` \`fix\` \`refactor\` \`perf\` \`docs\` \`style\` \`test\` \`build\` \`ci\` \`chore\` \`revert\`；scope 必填，用主要模块名（\`server\` / \`web\` / \`docs\` / \`ci\` / \`deploy\`），跨多个模块时用主要的那个并在正文枚举。
+
+            破坏性变更在 type 后加 \`!\`，例如 \`feat(server)!: 破坏性变更\`。约定见 [AGENTS.md](https://github.com/Sparkzure/PayPrint/blob/main/AGENTS.md) 的「Git 提交」一节。`;
+              await github.rest.issues.createComment({ ...issue, body });
+            }
+            core.setFailed('PR 标题需符合 Conventional Commits：type(scope): 摘要');

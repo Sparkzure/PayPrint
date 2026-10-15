@@ -1,0 +1,26 @@
+# PayPrint 后端热重载配置（air）。
+#
+# 前端已拆到 PayPrint-Frontend 仓库，它的热重载是 vite 自己的 dev server
+# （npm run dev，/api 代理到本服务）。这里只盯 Go 代码：
+#   make dev        # 或直接 air -c .air.toml
+#
+# dev 二进制出在 tmp/（.gitignore 已忽略）；没有前端产物时二进制照常运行，
+# 只是浏览器访问是 404，接口联调用 vite 代理即可。
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# 固定 .exe 后缀：Windows 必须有扩展名才能直接执行，Linux/macOS 上无影响。
+cmd = "go build -o ./tmp/payprint-server-dev.exe ./cmd/server"
+bin = "./tmp/payprint-server-dev.exe"
+include_ext = ["go"]
+include_dir = ["server"]
+exclude_dir = ["server/internal/webui/dist", "tmp", "dist"]
+delay = 500
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true

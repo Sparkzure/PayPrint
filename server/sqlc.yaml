@@ -1,0 +1,39 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    schema: "internal/database/migrations"
+    queries: "internal/database/queries"
+    gen:
+      go:
+        package: "store"
+        out: "internal/store"
+        sql_package: "database/sql"
+        emit_interface: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        emit_exact_table_names: false
+        emit_json_tags: false
+        omit_unused_structs: false
+        # The SQLite engine cannot infer the base type of a nullable column, so
+        # NULL-able foreign keys would otherwise come back as interface{}.
+        overrides:
+          - column: "devices.user_id"
+            go_type:
+              type: "string"
+              pointer: true
+          # Admin sessions have no device (migration 00007); NULL is meaningful here,
+          # so it must not collapse into an empty string.
+          - column: "sessions.device_id"
+            go_type:
+              type: "string"
+              pointer: true
+          - column: "payment_events.order_id"
+            go_type:
+              type: "string"
+              pointer: true
+          # The account a receipt belongs to. Learned from the order when the report
+          # does not carry one (collector / official callback), so NULL is meaningful.
+          - column: "payment_events.user_id"
+            go_type:
+              type: "string"
+              pointer: true

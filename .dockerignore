@@ -1,0 +1,12 @@
+# 让构建上下文保持最小：镜像里只需要 server/ 的源码与前端产物。
+.git
+.github
+.codebuddy
+.tools
+data
+dist
+docs
+deploy
+scripts
+server/internal/webui/dist
+*.md

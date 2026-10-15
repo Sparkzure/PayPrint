@@ -1,0 +1,53 @@
+# payprint 的 systemd 单元：服务在开机时自启（WantedBy=multi-user.target），
+# 崩溃自动拉起（Restart=always）。
+#
+# **一键安装**：sudo bash scripts/install-service.sh
+# 它按本文件里的 User / ExecStart / ReadWritePaths 建账号、装二进制与单元文件，
+# 再 daemon-reload + enable + restart，并等 /healthz 回话。本文件是唯一的单元定义，
+# 脚本不再抄一份，所以两边不会对不上（--dry-run 可以先看它打算做什么）。
+#
+# 手工安装（Linux，部署目录 /opt/payprint）：部署前这个目录里**只有二进制**，
+# 首次启动会在它旁边生成 payprint.conf 与 data/；此后整个目录自包含，
+# 把它整体搬走再重启服务就等于迁移。
+#
+#   groupadd -r payprint
+#   useradd -r -g payprint -s /usr/sbin/nologin payprint
+#   install -d -o payprint -g payprint /opt/payprint
+#   install -m 0755 payprint-server /opt/payprint/payprint-server
+#   install -m 0644 deploy/systemd/payprint.service /etc/systemd/system/
+#
+#   # 首次启动会自动生成 /opt/payprint/payprint.conf 与 /opt/payprint/data/
+#   systemctl daemon-reload && systemctl enable --now payprint
+#   systemctl status payprint
+#   journalctl -u payprint -f
+#
+# 配置文件默认在**二进制旁边**（不是工作目录：WorkingDirectory 设成什么都不影响它读哪份）。
+# 想放到别处就传 -config，那时把 db_path / storage_dir 写成绝对路径。
+# 备份 = 备份 /opt/payprint/data（数据库 + 上传文件）与 payprint.conf（含运维令牌）。
+
+[Unit]
+Description=payprint 自助打印服务
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=payprint
+WorkingDirectory=/opt/payprint
+ExecStart=/opt/payprint/payprint-server
+# 换配置文件位置时用这一行代替上面那行（并把那个目录一起加进 ReadWritePaths，
+# 否则首次生成/修改配置会失败，只剩一条警告）：
+# ExecStart=/opt/payprint/payprint-server -config /etc/payprint/payprint.conf
+
+Restart=always
+RestartSec=3
+
+# 加固：除部署目录（要写配置文件与 data/）之外，文件系统一律只读。
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/payprint
+
+[Install]
+WantedBy=multi-user.target

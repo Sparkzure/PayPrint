@@ -1,0 +1,18 @@
+services:
+  payprint:
+    image: 'ghcr.io/sparkzure/payprint:latest'
+    # 本地构建镜像时注释掉上面的 image，改用：
+    # build: .
+    container_name: payprint
+    restart: always
+    ports:
+      - '8080:8080'
+    environment:
+      # 在线时段按容器本地时间判定，时区要跟打印点一致。
+      - TZ=Asia/Shanghai
+      - UMASK=022
+    volumes:
+      # 配置、数据库与上传文件全在这个目录里，备份它 = 备份整站。
+      - './data:/opt/payprint/data'
+    # 打印机在宿主机所在的局域网里：默认桥接网络即可直连，不需要 host 网络。
+    # 管理面板别直接暴露公网；需要远程访问时在前面加一层带 TLS 的反向代理。

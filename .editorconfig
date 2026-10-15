@@ -1,0 +1,33 @@
+# EditorConfig: https://editorconfig.org
+# 让不同编辑器的缩进、换行与编码保持一致。仓库内的换行符统一为 LF，
+# 由 .gitattributes 保证；这里只是让编辑器在你敲下第一个字符前就对齐。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.go]
+indent_style = tab
+
+[Makefile]
+indent_style = tab
+
+[*.{md,markdown}]
+trim_trailing_whitespace = false
+
+# cmd.exe 只认 CRLF，这两个扩展名不要被规范化成 LF。
+[*.{cmd,bat}]
+end_of_line = crlf
+
+# ---------------------------------------------------------------
+# 注意：下面两类文件必须保持纯 ASCII，改之前先看 docs/DEVELOPMENT.md：
+#   * .ps1：PowerShell 5.1 会把无 BOM 的 UTF-8 当 ANSI(GBK) 读，中文会让脚本解析失败
+#   * .sql：sqlc 的 SQLite parser 遇到中文注释会报语法错误，且报错位置具有误导性
+# Go 代码与 .sh 脚本里的中文注释不受限制，可正常使用。
+# ---------------------------------------------------------------

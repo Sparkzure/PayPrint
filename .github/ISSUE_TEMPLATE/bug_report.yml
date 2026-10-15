@@ -1,0 +1,92 @@
+name: 缺陷报告
+description: 报告一个可复现的问题
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先搜索已有 issue。
+        **安全问题不要开 issue**，请按 [SECURITY.md](https://github.com/Sparkzure/PayPrint/blob/main/SECURITY.md) 私下报告。
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / 提交
+      description: 启动日志第一行会报出二进制版本；不确定就填 `git rev-parse --short HEAD` 的结果
+      placeholder: v0.1.0 或 a1b2c3d
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 涉及部分
+      multiple: false
+      options:
+        - 后端 API / 业务逻辑
+        - 前端页面
+        - 管理面板
+        - 打印机 / IPP 投递
+        - 支付到账匹配
+        - 部署 / systemd / 配置
+        - 构建 / 交叉编译
+        - 文档
+        - 其它
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: 平台
+      description: 操作系统与架构，例如 Ubuntu 24.04 arm64（树莓派 4B）
+      placeholder: Ubuntu 24.04 arm64
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: 实际现象。涉及订单或打印任务时，请写出它们当时的状态。
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你期望发生什么，依据是什么（文档里的哪一句 / 哪个约定）
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 越具体越好；能给出 curl 调用或面板上的点选顺序最好
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: 相关日志片段。**提交前请删掉 IP、数据库路径、令牌、账号等敏感信息。**
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 我已搜索过已有 issue 与文档，没有找到相同问题
+          required: true
+        - label: 这与安全漏洞无关（安全漏洞请走 SECURITY.md 的私下渠道）
+          required: true

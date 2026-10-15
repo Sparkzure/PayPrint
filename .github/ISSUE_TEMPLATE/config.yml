@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 报告安全漏洞
+    url: https://github.com/Sparkzure/PayPrint/security/advisories/new
+    about: 请不要用公开 issue 报告漏洞，走私密报告通道（详见 SECURITY.md）
+
+  - name: 安装 / 使用 / 排障
+    url: https://github.com/Sparkzure/PayPrint/blob/main/README.md
+    about: 常见问题与部署步骤先看 README 与 docs/DEPLOY.md，多数问题在那已经答过

@@ -1,0 +1,85 @@
+name: CI
+
+# 后端仓的 CI。前端（类型检查、构建、自己的冒烟）在 PayPrint-Frontend 仓库跑；
+# 这里的冒烟任务会把前端仓一并检出：端到端脚本 import 前端真实的签名实现，
+# 这是"前后端签名协议一致"的唯一跨语言验证。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: 后端（Go）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: gofmt
+        run: |
+          files="$(gofmt -l ./cmd ./internal)"
+          if [ -n "$files" ]; then
+            echo "以下文件未格式化（跑 gofmt -w 修一下）："
+            echo "$files"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test -race ./...
+
+  smoke:
+    name: 端到端冒烟
+    runs-on: ubuntu-latest
+    needs: [server]
+    steps:
+      - uses: actions/checkout@v4
+
+      # 端到端脚本在前端仓库里（用真实签名实现打真实 HTTP，并起一台假 IPP 打印机）。
+      # 检出在仓库目录下，smoke.sh 会自动找到它。
+      - name: 检出 PayPrint-Frontend
+        uses: actions/checkout@v4
+        with:
+          repository: Sparkzure/PayPrint-Frontend
+          ref: main
+          path: PayPrint-Frontend
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PayPrint-Frontend/package-lock.json
+
+      - name: npm ci
+        working-directory: PayPrint-Frontend
+        run: npm ci --no-audit --no-fund
+
+      # 真实签名 + 真实 HTTP + 假 IPP 打印机，跑完注册到出纸的整条链路，
+      # 并断言「一个订单只出一次纸」这类单测覆盖不到的不变量。
+      # 构建走 --no-web：冒烟只打 API 与 IPP，不需要前端产物。
+      - name: 冒烟
+        run: sh scripts/smoke.sh
