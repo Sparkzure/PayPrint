@@ -46,6 +46,9 @@ jobs:
       # release-* 目标自带 web 步骤（从 PayPrint-Frontend 最新 Release 取 dist），
       # 然后逐平台交叉编译，产物落在 dist/。
       - name: 构建（VERSION 取自 tag）
+        env:
+          # 传给 scripts/web.sh：认证后的 GitHub API 不吃匿名限流
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: make ${{ matrix.target }} VERSION=${{ env.TAG }}
 
       - name: 打包（zip 内是平台原生二进制）

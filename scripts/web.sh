@@ -53,13 +53,23 @@ if [ -z "$OUT" ]; then OUT="$ROOT/server/internal/webui/dist"; fi
 command -v curl >/dev/null 2>&1 || { echo 'error: curl is required' >&2; exit 1; }
 command -v tar  >/dev/null 2>&1 || { echo 'error: tar is required' >&2; exit 1; }
 
+# GITHUB_TOKEN 在 CI 里由 release.yml 注入。api.github.com 对匿名请求按 IP 限流
+# （60 次/小时），GitHub 托管运行器的共享出口 IP 几乎永远超额，匿名调用必挂。
+fetch_url() {
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "$@"
+  else
+    curl -fsSL "$@"
+  fi
+}
+
 if [ "$FORCE" -eq 0 ] && [ -f "$OUT/index.html" ]; then
   echo "[web] $OUT/index.html already present, skip download (use --force to refresh)"
   exit 0
 fi
 
 if [ "$TAG" = "latest" ]; then
-  TAG="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
+  TAG="$(fetch_url "https://api.github.com/repos/$REPO/releases/latest" \
     | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"
   [ -n "$TAG" ] || { echo "error: cannot resolve the latest $REPO release" >&2; exit 1; }
 fi
@@ -73,7 +83,7 @@ echo "[web] downloading $URL"
 curl -fsSL -o "$TMP" "$URL"
 
 # Verify against the sidecar checksum when the release provides one.
-if curl -fsSL -o "$TMP.sha256" "$URL.sha256" 2>/dev/null; then
+if fetch_url "$URL.sha256" >"$TMP.sha256" 2>/dev/null; then
   echo "$TMP  $(sed 's/ .*//' "$TMP.sha256")" | sha256sum -c - >/dev/null \
     || { echo "error: checksum mismatch for $ASSET" >&2; exit 1; }
   echo '[web] sha256 ok'

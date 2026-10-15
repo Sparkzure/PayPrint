@@ -10,16 +10,21 @@
 # ---- 1. 前端产物（从 PayPrint-Frontend 的 Release 下载）---------------------
 FROM --platform=$BUILDPLATFORM alpine:3.20 AS webdist
 ARG WEB_VERSION=latest
+# CI 传入 GITHUB_TOKEN：api.github.com 对匿名请求按 IP 限流，托管运行器的共享
+# 出口 IP 几乎永远超额。本地构建可以不传。ARG 只出现在本阶段的层里，最终镜像
+# 不含它，且 GITHUB_TOKEN 本身就是一次运行一换的短时令牌。
+ARG GITHUB_TOKEN=""
 RUN apk add --no-cache curl tar && \
+    fetch() { if [ -n "$GITHUB_TOKEN" ]; then curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "$@"; else curl -fsSL "$@"; fi; } && \
     if [ "$WEB_VERSION" = "latest" ]; then \
-      TAG="$(curl -fsSL https://api.github.com/repos/Sparkzure/PayPrint-Frontend/releases/latest \
+      TAG="$(fetch https://api.github.com/repos/Sparkzure/PayPrint-Frontend/releases/latest \
         | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"; \
     else \
       TAG="$WEB_VERSION"; \
     fi && \
     [ -n "$TAG" ] || { echo "error: cannot resolve a PayPrint-Frontend release (set WEB_VERSION?)" >&2; exit 1; } && \
     echo "web dist: $TAG" && \
-    curl -fsSL -o /tmp/web.tar.gz \
+    fetch -o /tmp/web.tar.gz \
       "https://github.com/Sparkzure/PayPrint-Frontend/releases/download/${TAG}/payprint-web-${TAG}.tar.gz" && \
     mkdir -p /webdist && tar -xzf /tmp/web.tar.gz -C /webdist
 

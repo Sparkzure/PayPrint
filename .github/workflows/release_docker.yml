@@ -61,6 +61,7 @@ jobs:
             VERSION=${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
             GIT_COMMIT=${{ github.sha }}
             BUILT_AT=${{ github.event.head_commit.timestamp }}
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
