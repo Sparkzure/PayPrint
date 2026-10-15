@@ -54,7 +54,9 @@ Thumbs.db
 # 构建产物与临时文件
 # ---------------------------------------------------------------
 # build 脚本把单二进制出在这里（-Out 可以改）。
-dist/
+# 锚定仓库根：不带斜杠前缀会连 server/internal/webui/dist/ 一起忽略，
+# 导致 .gitkeep 白名单失效、CI 检出后 go:embed 编译失败。
+/dist/
 server/payprint-server
 server/payprint-server.exe
 *.log
