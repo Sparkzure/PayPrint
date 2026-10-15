@@ -83,9 +83,16 @@ echo "[web] downloading $URL"
 curl -fsSL -o "$TMP" "$URL"
 
 # Verify against the sidecar checksum when the release provides one.
+# 比较哈希字符串而不是 `sha256sum -c -`：后者从管道读清单在部分环境
+# （Git for Windows 的 coreutils）会误报格式错误，字符串比对没有这个坑。
 if fetch_url "$URL.sha256" >"$TMP.sha256" 2>/dev/null; then
-  echo "$TMP  $(sed 's/ .*//' "$TMP.sha256")" | sha256sum -c - >/dev/null \
-    || { echo "error: checksum mismatch for $ASSET" >&2; exit 1; }
+  EXPECTED="$(sed 's/ .*//' "$TMP.sha256")"
+  ACTUAL="$(sha256sum "$TMP")"
+  ACTUAL="${ACTUAL%% *}"
+  if [ "$ACTUAL" != "$EXPECTED" ]; then
+    echo "error: checksum mismatch for $ASSET" >&2
+    exit 1
+  fi
   echo '[web] sha256 ok'
 else
   echo '[web] no checksum sidecar, skipping verification'
