@@ -110,6 +110,12 @@ if [ -z "$OUT" ]; then
   esac
 fi
 mkdir -p "$(dirname -- "$OUT")"
+# 相对 -o 以仓库根为基准：编译步骤会 cd 进 server/，不锚定的话
+# 产物会落在 server/dist/ 下，打包步骤在根上找不到。
+case "$OUT" in
+  /*) ;;
+  *) OUT="$ROOT/$OUT" ;;
+esac
 
 if [ -z "$GIT_COMMIT" ]; then
   GIT_COMMIT="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
