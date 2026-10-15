@@ -33,17 +33,17 @@ func NewUserView(u store.User) UserView {
 		tone = domain.ToneDanger
 	}
 	return UserView{
-		ID:          u.ID,
-		Username:    u.Username,
-		Role:        u.Role,
-		Status:      u.Status,
-		StatusText:  statusText,
-		Tone:        string(tone),
-		CreatedAt:   u.CreatedAt,
-		FreePrint:   u.FreePrint != 0,
-		BanReason:   u.BanReason,
-		BannedAt:    u.BannedAt,
-		BannedBy:    u.BannedBy,
+		ID:         u.ID,
+		Username:   u.Username,
+		Role:       u.Role,
+		Status:     u.Status,
+		StatusText: statusText,
+		Tone:       string(tone),
+		CreatedAt:  u.CreatedAt,
+		FreePrint:  u.FreePrint != 0,
+		BanReason:  u.BanReason,
+		BannedAt:   u.BannedAt,
+		BannedBy:   u.BannedBy,
 	}
 }
 
