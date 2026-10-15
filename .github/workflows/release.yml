@@ -47,8 +47,10 @@ jobs:
           GOARM: ${{ matrix.goarm }}
           GOAMD64: v1
         run: |
-          sh scripts/build.sh --version "$TAG" \
-            -o "dist/payprint-server-${{ matrix.target }}"
+          # go build -o does not append .exe automatically; add it for windows targets
+          EXE="payprint-server-${{ matrix.target }}"
+          case "${{ matrix.target }}" in windows*) EXE="$EXE.exe" ;; esac
+          sh scripts/build.sh --version "$TAG" -o "dist/$EXE"
 
       - name: 打包（zip 内是平台原生二进制）
         run: |
