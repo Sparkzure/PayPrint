@@ -122,6 +122,8 @@ try {
 
     $env:SMOKE_BASE = "http://127.0.0.1:$Port"
     $env:SMOKE_ADMIN_TOKEN = 'smoke-admin-token'
+    # The smoke binary is built -NoWeb, so the SPA fallback assertions must be skipped.
+    $env:SMOKE_NO_WEB = '1'
     Push-Location $webDir
     node scripts/smoke.mjs
     $exitCode = $LASTEXITCODE

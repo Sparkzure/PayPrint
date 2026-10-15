@@ -144,7 +144,7 @@ rc=0
 (
   cd "$WEB_DIR"
   SMOKE_BASE="http://127.0.0.1:$PORT" SMOKE_ADMIN_TOKEN="$ADMIN_TOKEN" \
-    node scripts/smoke.mjs
+    SMOKE_NO_WEB=1 node scripts/smoke.mjs
 ) || rc=$?
 
 if [ "$rc" -ne 0 ]; then
