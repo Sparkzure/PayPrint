@@ -1,9 +1,8 @@
 name: Release
 
-# 在 GitHub 上发布 Release（通常先推 tag 再建 Release）后，
-# 自动构建四个平台的单二进制，打成 zip（附 SHA256）并附到这个 Release 上。
-# 版本号取 Release 的 tag 名，经 -ldflags 写进启动日志。
-# 前端产物从 PayPrint-Frontend 的最新 Release 下载（make release-* 自带 web 步骤）。
+# Release 发布（人工 Publish）后，构建四平台单二进制并挂到该 Release 上。
+# 版本号取 Release 的 tag 名，经 -ldflags 写进启动日志；前端产物从
+# PayPrint-Frontend 最新 Release 下载（build.sh 自带，走认证的 GitHub API）。
 
 on:
   release:
@@ -21,20 +20,16 @@ env:
 
 jobs:
   assets:
-    name: 构建 ${{ matrix.zip }}
+    name: 构建 ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: release-linux-amd64
-            zip: payprint-server-${{ github.event.release.tag_name }}-linux-amd64.zip
-          - target: release-linux-arm64
-            zip: payprint-server-${{ github.event.release.tag_name }}-linux-arm64.zip
-          - target: release-linux-armv7
-            zip: payprint-server-${{ github.event.release.tag_name }}-linux-armv7.zip
-          - target: release-windows-amd64
-            zip: payprint-server-${{ github.event.release.tag_name }}-windows-amd64.zip
+          - { target: linux-amd64,   goos: linux,   goarch: amd64 }
+          - { target: linux-arm64,   goos: linux,   goarch: arm64 }
+          - { target: linux-armv7,   goos: linux,   goarch: arm,   goarm: '7' }
+          - { target: windows-amd64, goos: windows, goarch: amd64 }
     steps:
       - uses: actions/checkout@v4
 
@@ -43,27 +38,30 @@ jobs:
           go-version-file: server/go.mod
           cache-dependency-path: server/go.sum
 
-      # release-* 目标自带 web 步骤（从 PayPrint-Frontend 最新 Release 取 dist），
-      # 然后逐平台交叉编译，产物落在 dist/。
       - name: 构建（VERSION 取自 tag）
         env:
           # 传给 scripts/web.sh：认证后的 GitHub API 不吃匿名限流
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: make ${{ matrix.target }} VERSION=${{ env.TAG }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          GOAMD64: v1
+        run: |
+          sh scripts/build.sh --version "$TAG" \
+            -o "dist/payprint-server-${{ matrix.target }}"
 
       - name: 打包（zip 内是平台原生二进制）
         run: |
           mkdir -p upload
-          case "${{ matrix.zip }}" in
-            *windows*) EXE=payprint-server.exe ;;
-            *)         EXE=payprint-server ;;
-          esac
-          # zip 里的二进制统一命名（去掉平台后缀），解压即用。
-          cp "dist/$EXE" "upload/payprint-server${{ matrix.zip == '*windows*' && '.exe' || '' }}"
-          ( cd upload && zip -q "${{ matrix.zip }}" "payprint-server${{ matrix.zip == '*windows*' && '.exe' || '' }}" )
-          sha256sum "upload/${{ matrix.zip }}" > "upload/${{ matrix.zip }}.sha256"
+          EXE="payprint-server-${{ matrix.target }}"
+          case "${{ matrix.target }}" in windows*) EXE="$EXE.exe" ;; esac
+          cp "dist/$EXE" "upload/$EXE"
+          ZIP="payprint-server-$TAG-${{ matrix.target }}.zip"
+          ( cd upload && zip -q "$ZIP" "$EXE" )
+          sha256sum "upload/$ZIP" > "upload/$ZIP.sha256"
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
 
       - name: 上传到 Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ env.TAG }}" "upload/${{ matrix.zip }}" "upload/${{ matrix.zip }}.sha256" --clobber
+        run: gh release upload "$TAG" "upload/$ZIP" "upload/$ZIP.sha256" --clobber

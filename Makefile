@@ -62,6 +62,8 @@ clean: ## 删掉构建产物（dist/ 与 air 的 tmp/，不影响嵌入目录里
 	rm -rf dist tmp
 
 # ---- 交叉编译 ---------------------------------------------------------------
+# 供本机手动出包用；CI 的 release.yml 不经过 make，直接调 build.sh
+# （CI 的平台矩阵比这里宽，见 .github/workflows/release.yml）。
 # 前端产物只需要取一次：这些目标先跑 web，再让 build 复用嵌入目录里的产物。
 
 release-linux-amd64: web ## 交叉编译到 linux/amd64
